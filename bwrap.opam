@@ -1,0 +1,25 @@
+opam-version: "2.0"
+maintainer: "Christophe Troestler <Christophe.Troestler@umons.ac.be>"
+authors: ["Christophe Troestler <Christophe.Troestler@umons.ac.be>"]
+tags: ["sandbox" "bubblewrap"]
+license: "ISC"
+homepage: "https://github.com/Chris00/ocaml-bwrap"
+dev-repo: "git+https://github.com/Chris00/ocaml-bwrap.git"
+bug-reports: "https://github.com/Chris00/ocaml-bwrap/issues"
+doc: "https://Chris00.github.io/ocaml-bwrap/doc"
+build: [
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "build" "@doc"] {with-doc}
+]
+run-test: [
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+]
+depends: [
+  "ocaml" {>= "4.02"}
+  "dune" {build}
+  "base-unix"
+]
+synopsis: "Use Bubblewrap to sandbox executables"
+description: """
+Library using Bubblewrap to execute programs in a sandbox."""

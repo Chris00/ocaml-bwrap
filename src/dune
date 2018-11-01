@@ -1,0 +1,6 @@
+
+(library
+ (name        bwrap)
+ (public_name bwrap)
+ (libraries   unix)
+ (synopsis "Sandbox processes using bwrap"))
