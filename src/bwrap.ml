@@ -20,6 +20,7 @@ end
 type fs =
   | Bind of { src: string;  dest: string }
   | Bind_ro of { src: string;  dest: string }
+  | Bind_ro_try of { src: string;  dest: string } (* internal *)
   | Bind_dev of { src: string;  dest: string }
   | Remount_ro of string
   | Tmpfs of string
@@ -43,7 +44,7 @@ type conf = {
     dev: string;   (* = "" if not set *)
   }
 
-let conf = {
+let bare = {
     unshare_user = true;
     unshare_ipc = true;
     unshare_pid = true;
@@ -57,6 +58,30 @@ let conf = {
     fs = [];
     proc = "";
     dev = "";
+  }
+
+let conf ?uid ?gid () =
+  let uid = match uid with Some u -> u | None -> -1 in
+  let gid = match gid with Some u -> u | None -> -1 in
+  {
+    unshare_user = true;
+    unshare_ipc = true;
+    unshare_pid = true;
+    unshare_net = true;
+    unshare_uts = true;
+    unshare_cgroup = true;
+    uid;
+    gid;
+    hostname = "OCaml";
+    env = SMap.empty;
+    fs = [Bind_ro_try {src = "/bin"; dest = "/bin"};
+          Bind_ro_try {src = "/usr"; dest = "/usr"};
+          Bind_ro_try {src = "/lib"; dest = "/lib"};
+          Bind_ro_try {src = "/lib32"; dest = "/lib32"};
+          Bind_ro_try {src = "/lib64"; dest = "/lib64"};
+          Tmpfs "/tmp";  Tmpfs "/run";  Tmpfs "/var"];
+    proc = "/proc";
+    dev = "/dev";
   }
 
 let share_user c b = {c with unshare_user = not b}
@@ -119,6 +144,7 @@ let[@inline] add_arg2 a o v1 v2 =
 let[@inline] add_bind a m = match m with
   | Bind b -> add_arg2 a " --bind " b.src b.dest
   | Bind_ro b -> add_arg2 a " --ro-bind " b.src b.dest
+  | Bind_ro_try b -> add_arg2 a " --ro-bind-try " b.src b.dest
   | Bind_dev b -> add_arg2 a " --dev-bind " b.src b.dest
   | Remount_ro dest -> add_arg1 a " --remount-ro " dest
   | Tmpfs dest -> add_arg1 a " --tmpfs " dest

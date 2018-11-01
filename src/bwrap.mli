@@ -3,8 +3,14 @@
 
 type conf
 
-val conf : conf
+val bare : conf
 (** Configuration with all sharing disabled and an empty environment. *)
+
+val conf : ?uid: int -> ?gid: int -> unit -> conf
+(** Create a configuration with all sharing disabled, mounting in
+   read-only mode /bin, /usr, /lib, /lib32 and /lib64 (if they exist)
+   and on tmpfs /tmp, /run and /var.  The hostname is set to
+   "OCaml". *)
 
 val share_user : conf -> bool -> conf
 val share_ipc : conf -> bool -> conf
@@ -79,7 +85,8 @@ val symlink : conf -> src:string -> string -> conf
 
 val open_process_in : conf -> string -> string list -> in_channel
 (** [open_process_in c cmd args] runs the command [cmd] with arguments
-   [args] in a sandbox in parallel with the program.  *)
+   [args] in a sandbox in parallel with the program.  The standard
+   output of the program can be read on the returned channel. *)
 
 val close_process_in : in_channel -> Unix.process_status
 

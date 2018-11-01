@@ -1,5 +1,5 @@
 build:
-	dune build @install
+	dune build @install @exe
 
 test runtest:
 	dune runtest --force
