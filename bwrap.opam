@@ -20,6 +20,17 @@ depends: [
   "dune" {build}
   "base-unix"
 ]
+depexts: [
+  ["bubblewrap"] {os-distribution = "debian"}
+  ["bubblewrap"] {os-distribution = "ubuntu"}
+  ["bubblewrap"] {os-distribution = "alpine"}
+  ["bubblewrap"] {os-distribution = "fedora"}
+  ["bubblewrap"] {os-distribution = "rhel"}
+  ["bubblewrap"] {os-distribution = "centos"}
+  ["bubblewrap"] {os-distribution = "opensuse"}
+  ["bubblewrap"] {os-distribution = "mageia"}
+]
 synopsis: "Use Bubblewrap to sandbox executables"
 description: """
 Library using Bubblewrap to execute programs in a sandbox."""
+
