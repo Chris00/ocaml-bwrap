@@ -91,6 +91,13 @@ val new_session : conf -> bool -> conf
    otherwise the application can feed keyboard input to the terminal.
  *)
 
+val die_with_parent : conf -> bool -> conf
+(** [die_with_parent c b]: when [b] is [true], ensures that the
+   sandboxed command dies when the program using this library dies.
+   Kills (SIGKILL) all sandbox processes in sequence from parent to
+   child including the sandboxed command process when the process
+   using this library dies.  *)
+
 
 (** {2 Launch sandboxed processes} *)
 
