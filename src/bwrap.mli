@@ -80,6 +80,9 @@ val dir : conf -> string -> conf
 val symlink : conf -> src:string -> string -> conf
 (** [symlink c src dest] create a symlink at [dest] with target [src]. *)
 
+val chdir : conf -> string -> conf
+(** [chdir dir] change directory to [dir] in the sandboxed environment. *)
+
 val new_session : conf -> bool -> conf
 (** [new_session c b] when [b] is [true], create a new terminal
    session for the sandbox (calls setsid()).  This disconnects the
@@ -126,7 +129,10 @@ val close_process : in_channel * out_channel -> Unix.process_status
 val open_process_full :
   conf -> string -> string list -> in_channel * out_channel * in_channel
 (** [open_process_full c cmd args] runs the command [cmd] with
-   arguments [args] in a sandbox in parallel with the program.  *)
+   arguments [args] in a sandbox in parallel with the program.
+   The result is a triple of channels connected respectively to the
+   standard output, standard input, and standard error of the
+   command. *)
 
 val close_process_full :
   in_channel * out_channel * in_channel -> Unix.process_status

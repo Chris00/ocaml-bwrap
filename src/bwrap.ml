@@ -27,6 +27,7 @@ type fs =
   | Mqueue of string
   | Dir of string
   | Symlink of { src: string;  dest: string }
+  | Chdir of string
 
 type conf = {
     unshare_user: bool;
@@ -133,6 +134,8 @@ let dir c dest = {c with fs = Dir dest :: c.fs}
 
 let symlink c ~src dest = {c with fs = Symlink {src; dest} :: c.fs}
 
+let chdir c dir = {c with fs = Chdir dir :: c.fs}
+
 let new_session c b = {c with new_session = b}
 
 let die_with_parent c b = {c with die_with_parent = b}
@@ -162,6 +165,7 @@ let[@inline] add_bind a m = match m with
   | Mqueue dest -> add_arg1 a " --mqueue " dest
   | Dir dest -> add_arg1 a " --dir " dest
   | Symlink b -> add_arg2 a " --symlink " b.src b.dest
+  | Chdir d -> add_arg1 a " --chdir " d
 
 let make_cmd c ~env cmd args =
   let a = Buffer.create 1024 in
