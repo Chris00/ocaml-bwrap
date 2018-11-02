@@ -26,7 +26,7 @@ depexts: [
   ["bubblewrap"] {os-distribution = "alpine"}
   ["bubblewrap"] {os-distribution = "fedora"}
   ["bubblewrap"] {os-distribution = "rhel"}
-  ["bubblewrap"] {os-distribution = "centos" & os-version >= "7"}
+  ["bubblewrap" "epel-release"] {os-distribution = "centos" & os-version >= "7"}
   ["bubblewrap"] {os-distribution = "opensuse"}
   ["bubblewrap"] {os-distribution = "mageia"}
 ]
