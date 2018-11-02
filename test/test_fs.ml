@@ -40,4 +40,5 @@ let () =
   run "pwd" [];
   run "ls" ["-lp"];
   run "ls" ["/var"];
-  run "hostname" []
+  run "hostname" [];
+  run "echo" ["Hello"]

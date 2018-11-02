@@ -80,6 +80,17 @@ val dir : conf -> string -> conf
 val symlink : conf -> src:string -> string -> conf
 (** [symlink c src dest] create a symlink at [dest] with target [src]. *)
 
+val new_session : conf -> bool -> conf
+(** [new_session c b] when [b] is [true], create a new terminal
+   session for the sandbox (calls setsid()).  This disconnects the
+   sandbox from the controlling terminal which means the sandbox can't
+   for instance inject input into the terminal.
+
+   Note: In a general sandbox, if you don't use [new_session c true],
+   it is recommended to use seccomp to disallow the TIOCSTI ioctl,
+   otherwise the application can feed keyboard input to the terminal.
+ *)
+
 
 (** {2 Launch sandboxed processes} *)
 

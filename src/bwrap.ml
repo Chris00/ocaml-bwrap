@@ -42,6 +42,7 @@ type conf = {
     fs: fs list;  (* first = last entered *)
     proc: string;  (* = "" if not set *)
     dev: string;   (* = "" if not set *)
+    new_session: bool;
   }
 
 let bare = {
@@ -58,6 +59,7 @@ let bare = {
     fs = [];
     proc = "";
     dev = "";
+    new_session = true;
   }
 
 let conf ?uid ?gid () =
@@ -82,6 +84,7 @@ let conf ?uid ?gid () =
           Tmpfs "/tmp";  Tmpfs "/run";  Tmpfs "/var"];
     proc = "/proc";
     dev = "/dev";
+    new_session = true;
   }
 
 let share_user c b = {c with unshare_user = not b}
@@ -127,6 +130,8 @@ let dir c dest = {c with fs = Dir dest :: c.fs}
 
 let symlink c ~src dest = {c with fs = Symlink {src; dest} :: c.fs}
 
+let new_session c b = {c with new_session = b}
+
 (** Add a command line option with 1 argument [v].  It is assumed that
    [o] starts and ends with a space. *)
 let[@inline] add_arg1 a o v =
@@ -169,6 +174,7 @@ let make_cmd c ~env cmd args =
   (* Beware that the order of binds is important. *)
   if c.proc <> "" then add_arg1 a " --proc " c.proc;
   if c.dev <> "" then add_arg1 a " --dev " c.dev;
+  if c.new_session then Buffer.add_string a " --new-session";
   List.iter (add_bind a) (List.rev c.fs);
   if env then (
     (* Unset all variables of the environment and then set the ones
