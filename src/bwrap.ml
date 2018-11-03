@@ -16,11 +16,6 @@ module String = struct
     done;
     sub s 0 !j :: !r
 
-  let rec sum_lengths acc seplen = function
-    | [] -> acc
-    | [hd] -> String.length hd + acc
-    | hd :: tl -> sum_lengths (String.length hd + seplen + acc) seplen tl
-
   let rec unsafe_rev_blits dst pos sep seplen = function
     | [] -> dst
     | [hd] -> unsafe_blit hd 0 dst 0 (String.length hd);  dst
@@ -30,17 +25,20 @@ module String = struct
                   unsafe_blit sep 0 dst pos seplen;
                   unsafe_rev_blits dst pos sep seplen tl
 
-  (* Equivalent to [String.concat sep (List.rev l)]. *)
-  let rev_concat sep = function
-    | [] -> ""
-    | l -> let seplen = String.length sep in
-           let len = sum_lengths 0 seplen l in
-           Bytes.unsafe_to_string
-             (unsafe_rev_blits (Bytes.create len) len sep seplen l)
+  (* Equivalent to [String.concat sep (List.rev l)].
+     [n] = number of elements in [l].
+     [sum_len] = sum of lengths of the elements in [l]. *)
+  let rev_concat sep l ~n ~sum_len =
+    let seplen = String.length sep in
+    let len = (n - 1) * seplen + sum_len in
+    Bytes.unsafe_to_string
+      (unsafe_rev_blits (Bytes.create len) len sep seplen l)
 end
 
 type conf = {
-    args: string list; (* In reverse order *)
+    args: string list; (* arguments, in reverse order *)
+    n: int;            (* number of elements in [args]. *)
+    sum_len: int;      (* sum of lengths in [args]. *)
     unshare_user: bool;
     unshare_user_mandatory: bool;
     unshare_ipc: bool;
@@ -59,11 +57,21 @@ type conf = {
     die_with_parent: bool;
   }
 
-let[@inline] add_arg1 o v1 c = { c with args = v1 :: o :: c.args}
-let[@inline] add_arg2 o v1 v2 c = { c with args = v2 :: v1 :: o :: c.args}
+let[@inline] add_arg1 o v1 c =
+  { c with args = v1 :: o :: c.args;
+           n = 2 + c.n;
+           sum_len = String.length v1 + String.length o + c.sum_len}
+
+let[@inline] add_arg2 o v1 v2 c =
+  { c with
+    args = v2 :: v1 :: o :: c.args;
+    n = 3 + c.n;
+    sum_len = String.length v2 + String.length v1 + String.length o + c.sum_len}
 
 let bare = {
     args = ["bwrap"];
+    n = 1;
+    sum_len = 5;
     unshare_user = true;
     unshare_user_mandatory = false;
     unshare_ipc = true;
@@ -82,19 +90,28 @@ let bare = {
     die_with_parent = true;
   }
 
+let default_args = [
+    (* Beware [args] is in reverse order. *)
+    "/tmp"; "--tmpfs";
+    "/run"; "--tmpfs";
+    "/var"; "--tmpfs";
+    "/lib64"; "/lib64"; "--ro-bind-try";
+    "/lib32"; "/lib32"; "--ro-bind-try";
+    "/lib"; "/lib"; "--ro-bind-try";
+    "/usr"; "/usr"; "--ro-bind-try";
+    "/bin"; "/bin"; "--ro-bind-try";
+    "bwrap"]
+
+let default_n = List.length default_args
+let default_sum_len =
+  List.fold_left (fun l v -> l + String.length v) 0 default_args
+
 let conf ?uid ?gid () =
   let uid = match uid with Some u -> u | None -> -1 in
   let gid = match gid with Some u -> u | None -> -1 in
-  { (* Beware [args] is in reverse order. *)
-    args = ["/tmp"; "--tmpfs";
-            "/run"; "--tmpfs";
-            "/var"; "--tmpfs";
-            "/lib64"; "/lib64"; "--ro-bind-try";
-            "/lib32"; "/lib32"; "--ro-bind-try";
-            "/lib"; "/lib"; "--ro-bind-try";
-            "/usr"; "/usr"; "--ro-bind-try";
-            "/bin"; "/bin"; "--ro-bind-try";
-            "bwrap"];
+  { args = default_args;
+    n = default_n;
+    sum_len = default_sum_len;
     unshare_user = true;
     unshare_user_mandatory = false;
     unshare_ipc = true;
@@ -168,25 +185,34 @@ let new_session b c = {c with new_session = b}
 
 let die_with_parent b c = {c with die_with_parent = b}
 
-
 let make_cmd c ~env cmd args =
-  let a = if c.unshare_user_mandatory || c.unshare_user then
-            "--unshare-user" :: c.args
-          else c.args in
-  let a = if c.unshare_ipc then "--unshare-ipc" :: a else a in
-  let a = if c.unshare_pid then "--unshare-pid" :: a else a in
-  let a = if c.unshare_net then "--unshare-net" :: a else a in
-  let a = if c.unshare_uts_mandatory || c.unshare_uts then
-            "--unshare-uts" :: a
-          else a in
-  let a = if c.unshare_cgroup then "--unshare-cgroup" :: a else a in
-  let a = if c.uid >= 0 then string_of_int c.uid :: "--uid" :: a else a in
-  let a = if c.gid >= 0 then string_of_int c.gid :: "--gid" :: a else a in
-  let a = if c.hostname <> "" then c.hostname :: "--hostname" :: a else a in
-  let a = if c.proc <> "" then c.proc :: "--proc" :: a else a in
-  let a = if c.dev <> "" then c.dev :: "--dev" :: a else a in
-  let a = if c.new_session then "--new-session" :: a else a in
-  let a = if c.die_with_parent then "--die-with-parent" :: a else a in
+  let n = ref c.n in
+  let sum_len = ref c.sum_len in
+  let[@inline] add1 v a =
+    incr n;
+    sum_len := String.length v + !sum_len;
+    v :: a in
+  let[@inline] add1_cond cond v a = if cond then add1 v a else a in
+  let[@inline] add2 v1 v2 a =
+    n := !n + 2;
+    sum_len := String.length v2 + String.length v1 + !sum_len;
+    v2 :: v1 :: a in
+  let[@inline] add2_cond cond v1 v2 a = if cond then add2 v1 v2 a else a in
+  let a =
+    add1_cond (c.unshare_user_mandatory || c.unshare_user)
+      "--unshare-user" c.args
+    |> add1_cond c.unshare_ipc "--unshare-ipc"
+    |> add1_cond c.unshare_pid "--unshare-pid"
+    |> add1_cond c.unshare_net "--unshare-net"
+    |> add1_cond (c.unshare_uts_mandatory || c.unshare_uts) "--unshare-uts"
+    |> add1_cond c.unshare_cgroup "--unshare-cgroup"
+    |> add2_cond (c.uid >= 0) "--uid" (string_of_int c.uid)
+    |> add2_cond (c.gid >= 0) "--gid" (string_of_int c.gid)
+    |> add2_cond (c.hostname <> "") "--hostname" c.hostname
+    |> add2_cond (c.proc <> "") "--proc" c.proc
+    |> add2_cond (c.dev <> "") "--dev" c.dev
+    |> add1_cond c.new_session "--new-session"
+    |> add1_cond c.die_with_parent "--die-with-parent" in
   let a =
     if env then (
       (* Unset all variables of the environment and then set the ones
@@ -194,16 +220,19 @@ let make_cmd c ~env cmd args =
       let e = Unix.environment () in
       let a = Array.fold_left
                 (fun a e -> match String.split_on_char '=' e with
-                            | v :: _ -> v :: "--unsetenv" :: a
+                            | v :: _ -> add2 "--unsetenv" v a
                             | [] -> assert false (* See split_on_char *)
                 ) a e in
-      SMap.fold (fun var v a -> v :: var :: "--setenv" :: a) c.env a
+      SMap.fold (fun var v a ->
+          n := !n + 3;
+          sum_len := String.length v + String.length var + 8 + !sum_len;
+          v :: var :: "--setenv" :: a) c.env a
     )
     else a in
   (* Command to run. *)
-  let a = Filename.quote cmd :: a in
-  let a = List.fold_left (fun a x -> Filename.quote x :: a) a args in
-  String.rev_concat " " a
+  let a = add1 (Filename.quote cmd) a in
+  let a = List.fold_left (fun a x -> add1 (Filename.quote x) a) a args in
+  String.rev_concat " " a ~n:!n ~sum_len:!sum_len
 
 
 let open_process_in c cmd args =
