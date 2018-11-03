@@ -2,6 +2,10 @@
    using sandboxing technology. *)
 
 type conf
+(** Sandbox configuration.
+
+   You can create one using the functions below.
+   Example: [conf() |> mount "/usr"].  *)
 
 val bare : conf
 (** Configuration with all sharing disabled and an empty environment. *)
@@ -12,78 +16,81 @@ val conf : ?uid: int -> ?gid: int -> unit -> conf
    and on tmpfs /tmp, /run and /var.  The hostname is set to
    "OCaml". *)
 
-val share_user : conf -> bool -> conf
-val share_ipc : conf -> bool -> conf
-val share_pid : conf -> bool -> conf
-val share_net : conf -> bool -> conf
-val share_uts : conf -> bool -> conf
-val share_cgroup : conf -> bool -> conf
+val share_user : bool -> conf -> conf
+val share_ipc  : bool -> conf -> conf
+val share_pid  : bool -> conf -> conf
+val share_net  : bool -> conf -> conf
+val share_uts  : bool -> conf -> conf
+val share_cgroup : bool -> conf -> conf
 
-val uid : conf -> int -> conf
+val uid : int -> conf -> conf
 (** [uid c id] use a custom user [id] in the sandbox.  Automatically
    implies [share_user c false].  If [id < 0], unset it. *)
 
-val gid : conf -> int -> conf
+val gid : int -> conf -> conf
 (** [gid c id] use a custom group [id] in the sandbox.  Automatically
    implies [share_user c false].  If [id < 0], unset it. *)
 
-val hostname : conf -> string -> conf
+val hostname : string -> conf -> conf
 (** [hostname c h] use the custom hostname [h] in the sandbox.
    Automatically implies [share_uts c false].  If [h = ""], unset it. *)
 
-val setenv : conf -> string -> string -> conf
+val setenv : string -> string -> conf -> conf
 (** [setenv c var v] add the variable [var] with value [v] to the
    environment of the process. *)
 
-val unsetenv : conf -> string -> conf
+val unsetenv : string -> conf -> conf
 (** [unsetenv c var] remove the environment variable [var]. *)
 
 (** {2 Filesystem related options} *)
 
-val mount : conf -> ?dev:bool -> src:string -> ?rw:bool -> string -> conf
+val mount : ?dev:bool -> ?src:string -> ?rw:bool -> string -> conf -> conf
 (** [mount c src dest] mount the host path [src] on [dest] in the
    sandbox.  The mounts are applied in the order they are set, the
    latter ones being able undo what the previous ones did.  Any
    missing parent directories that are required to create a specified
    destination are automatically created as needed.
+
+   @param src if not provided, it defaults to [dest].
    @param dev If [true], allow device access.
    @param rw  If [true], mount in read and write (default, mount read-only).
 
    Example: [let c = mount c "/a" "/a" in mount c ~rw:true "/a/b" "/a/b"] *)
 
-val remount_ro : conf -> string -> conf
+val remount_ro : string -> conf -> conf
 (** [remount_ro c dest] remount the path [dest] as readonly.  It works
    only on the specified mount point, without changing any other mount
    point under the specified path.  *)
 
-val proc : conf -> string -> conf
+val proc : string -> conf -> conf
 (** [proc c dest] mount procfs on [dest].
    Example: [proc c "/proc"]. *)
 
-val dev : conf -> string -> conf
+val dev : string -> conf -> conf
 (** [dev c dest] mount new devtmpfs on [dest].
    Example: [dev c "/dev"]. *)
 
-val tmpfs : conf -> string -> conf
+val tmpfs : string -> conf -> conf
 (** [tmpfs c dest] mount new tmpfs on [dest].
    Example: [tmpfs c "/var"] or [tmpfs c "/tmp"]. *)
 
-val mqueue : conf -> string -> conf
+val mqueue : string -> conf -> conf
 (** [mqueue c dest] mount new mqueue on [dest]. *)
 
-val dir : conf -> string -> conf
+val dir : string -> conf -> conf
 (** [dir c dest] create directory [dest] in the sandbox. *)
 
 (* val file : conf -> Unix.file_descr -> string -> conf
  * val bind_data : conf -> Unix.file_descr -> ?ro: bool -> string -> conf *)
 
-val symlink : conf -> src:string -> string -> conf
-(** [symlink c src dest] create a symlink at [dest] with target [src]. *)
+val symlink : ?src:string -> string -> conf -> conf
+(** [symlink c src dest] create a symlink at [dest] with target [src].
+   @param src If not provided, it defaults to [dest]. *)
 
-val chdir : conf -> string -> conf
+val chdir : string -> conf -> conf
 (** [chdir dir] change directory to [dir] in the sandboxed environment. *)
 
-val new_session : conf -> bool -> conf
+val new_session : bool -> conf -> conf
 (** [new_session c b] when [b] is [true], create a new terminal
    session for the sandbox (calls setsid()).  This disconnects the
    sandbox from the controlling terminal which means the sandbox can't
@@ -94,7 +101,7 @@ val new_session : conf -> bool -> conf
    otherwise the application can feed keyboard input to the terminal.
  *)
 
-val die_with_parent : conf -> bool -> conf
+val die_with_parent : bool -> conf -> conf
 (** [die_with_parent c b]: when [b] is [true], ensures that the
    sandboxed command dies when the program using this library dies.
    Kills (SIGKILL) all sandbox processes in sequence from parent to

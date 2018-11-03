@@ -19,6 +19,7 @@ depends: [
   "ocaml" {>= "4.03"}
   "dune" {build}
   "base-unix"
+  "base-bytes"
 ]
 depexts: [
   ["bubblewrap"] {os-distribution = "debian"}
