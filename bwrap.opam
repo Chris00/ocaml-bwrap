@@ -21,6 +21,7 @@ depends: [
   "base-unix"
   "base-bytes"
 ]
+available: [os = "linux"]
 depexts: [
   ["bubblewrap"] {os-distribution = "debian"}
   ["bubblewrap"] {os-distribution = "ubuntu" & os-version >= "17.0"}
