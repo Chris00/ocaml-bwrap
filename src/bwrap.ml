@@ -90,17 +90,23 @@ let bare = {
     die_with_parent = true;
   }
 
-let default_args = [
-    (* Beware [args] is in reverse order. *)
+(* Newer versions of bwrap have --ro-bind-try but not older ones. *)
+let[@inline] ro_bind_try path args =
+  if Sys.file_exists path then path :: path :: "--ro-bind" :: args
+  else args
+
+let default_args =
+  [ (* Beware [args] is in reverse order. *)
     "/tmp"; "--tmpfs";
     "/run"; "--tmpfs";
     "/var"; "--tmpfs";
-    "/lib64"; "/lib64"; "--ro-bind-try";
-    "/lib32"; "/lib32"; "--ro-bind-try";
-    "/lib"; "/lib"; "--ro-bind-try";
-    "/usr"; "/usr"; "--ro-bind-try";
-    "/bin"; "/bin"; "--ro-bind-try";
-    "bwrap"]
+    "bwrap"
+  ]
+  |> ro_bind_try "/lib64"
+  |> ro_bind_try "/lib32"
+  |> ro_bind_try "/lib"
+  |> ro_bind_try "/usr"
+  |> ro_bind_try "/bin"
 
 let default_n = List.length default_args
 let default_sum_len =
