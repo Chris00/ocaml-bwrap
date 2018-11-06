@@ -1,5 +1,4 @@
 open Printf
-module C = Configurator.V1
 
 module String = struct
   include String
@@ -56,28 +55,6 @@ module Find_in_path = struct
 
   let exe = if Sys.win32 then ".exe" else ""
 
-  let prog_not_found prog =
-    C.die "Program %s not found in PATH" prog
-
-  let best_prog dir prog =
-    let fn = Filename.concat dir (prog ^ ".opt" ^ exe) in
-    if Sys.file_exists fn then
-      Some fn
-    else
-      let fn = Filename.concat dir (prog ^ exe) in
-      if Sys.file_exists fn then
-        Some fn
-      else
-        None
-
-  let find_ocaml_prog prog =
-    match
-      List.find_map (get_path ()) ~f:(fun dir ->
-          best_prog dir prog)
-    with
-    | None -> prog_not_found prog
-    | Some fn -> fn
-
   let find prog =
     List.find_map (get_path ()) ~f:(fun dir ->
         let fn = Filename.concat dir (prog ^ exe) in
@@ -108,18 +85,23 @@ let run cmd =
   Sys.remove stdout_fn;
   Sys.remove stderr_fn;
   if exit_code <> 0 then
-    C.die "Command %s terminated with code %d." cmd exit_code;
+    eprintf "Command %s terminated with code %d." cmd exit_code;
   (stdout, stderr)
 
 let () =
-  match Find_in_path.find "bwrap" with
-  | Some bwrap ->
-     let (o, _e) = run (bwrap ^ " --version") in
-     (match String.split_on_char ' ' o with
-      | _ :: v :: _ ->
-         let fh = open_out "bwrap_version.txt" in
-         fprintf fh "%s" (String.trim v);
-         close_out fh
+  let version =
+    match Find_in_path.find "bwrap" with
+    | Some bwrap ->
+       let (o, _e) = run (bwrap ^ " --version") in
+       (match String.split_on_char ' ' o with
+        | _ :: v :: _ -> String.trim v
       | _ ->
-         C.die "bwrap --version returned %S, could not extract version.\n" o)
-  | None -> C.die "Command `bwrap` not found in path\n"
+         eprintf "bwrap --version returned %S, could not extract version.\n" o;
+         "0.0.0")
+    | None ->
+       eprintf "Command \"bwrap\" not found in path\n";
+       "0.0.0" in
+  let fh = open_out "bwrap_version.txt" in
+  fprintf fh "%s" version;
+  close_out fh
+
