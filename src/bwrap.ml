@@ -218,7 +218,10 @@ let make_cmd c ~env cmd args =
     |> add2_cond (c.proc <> "") "--proc" c.proc
     |> add2_cond (c.dev <> "") "--dev" c.dev
     |> add1_cond c.new_session "--new-session"
-    |> add1_cond c.die_with_parent "--die-with-parent" in
+#if BWRAP_VERSION >= (0, 1, 8)
+    |> add1_cond c.die_with_parent "--die-with-parent"
+#endif
+  in
   let a =
     if env then (
       (* Unset all variables of the environment and then set the ones
