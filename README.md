@@ -4,7 +4,7 @@ Bwrap
 This library provides a way to launch commands in a sandbox using
 [bwrap][] on Linux.
 
-[bwrap]: https://github.com/projectatomic/bubblewrap
+[bwrap]: https://github.com/containers/bubblewrap
 
 Install
 -------
